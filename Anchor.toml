@@ -1,0 +1,14 @@
+[features]
+seeds = true
+[programs.devnet]
+solana_blog_tutorial = "6JZCuw4DApw1gbwbHSyQUqxEoVtPhGsqADdKCere7cUn"
+
+[registry]
+url = "https://anchor.projectserum.com"
+
+[provider]
+cluster = "devnet"
+wallet = "/Users/aadyakalra/.config/solana/id.json"
+
+[scripts]
+test = "node tests/solana_blog_tutorial.js"
