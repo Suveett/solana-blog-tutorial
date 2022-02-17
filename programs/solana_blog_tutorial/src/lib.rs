@@ -92,7 +92,7 @@ pub mod solana_blog_tutorial {
     #[derive(Accounts)]
     #[instruction(blog_account_bump: u8)]
     pub struct Initialize<'info> {
-        #[account(init, seeds = [b"hello".as_ref()], bump = blog_account_bump, payer = authority, space = BlogState::LEN)]
+        #[account(init, seeds = [b"blog_state".as_ref()], bump = blog_account_bump, payer = authority, space = BlogState::LEN)]
         blog_account: Account<'info, BlogState>,
         #[account(mut)]
         authority: Signer<'info>,
@@ -104,7 +104,7 @@ pub mod solana_blog_tutorial {
     #[derive(Accounts)]
     
     pub struct MakePost<'info> {
-        #[account(mut, seeds = [b"hello".as_ref()], bump = blog_account.bump, has_one = authority )]
+        #[account(mut, seeds = [b"blog_state".as_ref()], bump = blog_account.bump, has_one = authority )]
         blog_account: Account<'info, BlogState>,
         #[account(mut)]
         authority: Signer<'info>,
