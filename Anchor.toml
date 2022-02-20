@@ -1,5 +1,5 @@
 [features]
-seeds = false
+seeds = true
 
 [programs.devnet]
 solana_blog_tutorial = "9PDxrRioTz3yGPtVP5unaa9FhT12YdcVADYLiG4CME7i"
