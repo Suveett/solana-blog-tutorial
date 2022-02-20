@@ -57,12 +57,6 @@ pub mod solana_blog_tutorial {
         //     return Err(ProgramError::IncorrectProgramId);
         // }
 
-        //      //Lets build a BlogStruct here.
-        //      let new_blog = BlogStruct {
-        //         blog : post.to_string(),
-        //         user_address : *authority.to_account_info().key,
-        //     };
-
         //     //We doubly check that user_address = Signer's pubkey
         //     if new_blog.user_address != *authority.to_account_info().key {
         //         msg!("You are not authorized to perform this action.");
@@ -76,6 +70,7 @@ pub mod solana_blog_tutorial {
         //         }
 
         //     new_blog.serialize(&mut &mut blog.to_account_info().data.borrow_mut()[..])?;
+        
         blog.posts.push(new_blog);
         blog.count += 1;
 
