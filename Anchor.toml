@@ -1,7 +1,7 @@
 [features]
 seeds = true
 [programs.devnet]
-solana_blog_tutorial = "6JZCuw4DApw1gbwbHSyQUqxEoVtPhGsqADdKCere7cUn"
+solana_blog_tutorial = "9PDxrRioTz3yGPtVP5unaa9FhT12YdcVADYLiG4CME7i"
 
 [registry]
 url = "https://anchor.projectserum.com"
@@ -11,4 +11,4 @@ cluster = "devnet"
 wallet = "/Users/aadyakalra/.config/solana/id.json"
 
 [scripts]
-test = "node tests/solana_blog_tutorial.js"
+test = "yarn run mocha -t 1000000 tests/"
