@@ -1,119 +1,122 @@
 use self::id as program_id;
 use anchor_lang::prelude::*;
 use anchor_lang::solana_program::system_program;
-use std::str::from_utf8;
+//use std::str::from_utf8;
 
-declare_id!("6JZCuw4DApw1gbwbHSyQUqxEoVtPhGsqADdKCere7cUn");
+declare_id!("9PDxrRioTz3yGPtVP5unaa9FhT12YdcVADYLiG4CME7i");
 
 #[program]
 pub mod solana_blog_tutorial {
+    //use anchor_lang::solana_program::system_instruction::create_nonce_account_with_seed;
+
     use super::*;
+
+    // `seeds` and `bump` tell us that our `blog_account` is a PDA that can be derived from their respective values
+    
     pub fn initialize(ctx: Context<Initialize>, blog_account_bump: u8) -> ProgramResult {
         let blog = &mut ctx.accounts.blog_account;
         let authority = &mut ctx.accounts.authority;
-        let clock = Clock::get().unwrap();
+        
 
         blog.authority = *authority.key;
         blog.count = 0;
-        blog.posts = Vec::new();
-        //ctx.accounts.blog_account.bump = blog_account_bump;
         blog.bump = blog_account_bump;
         blog.owner = program_id();
-        blog.timestamp = clock.unix_timestamp;
-
+        
         Ok(())
     }
 
-    pub fn make_post(ctx: Context<MakePost>, new_post: Vec<u8>) -> ProgramResult {
-        let post = from_utf8(&new_post) // convert the array of bytes into a string slice
-            .map_err(|err| {
-                msg!("Invalid UTF-8, from byte {}", err.valid_up_to());
-                ProgramError::InvalidInstructionData
-            })?;
-        msg!(post); // msg!() is a Solana macro that prints string slices to the program log, which we can grab from the transaction block data
+    pub fn make_post(ctx: Context<MakePost>, 
+        author : String, 
+        title : String,  
+        post: String , 
+        slug : String,
+        post_account_bump : u8
+        
 
-        if post.chars().count() > 2052 {
+        ) -> ProgramResult {
+
+        // ?? What to do if we were to pass Data as a Uint8Array from Client side ?? //
+        // let post = from_utf8(&new_post_as_bytes) // convert the array of bytes into a string slice
+        //     .map_err(|err| {
+        //         msg!("Invalid UTF-8, from byte {}", err.valid_up_to());
+        //         ProgramError::InvalidInstructionData
+        //     })?;
+        // msg!(post); // msg!() is a Solana macro that prints string slices to the program log, which we can grab from the transaction block data
+
+        if post.chars().count() > 5000 {
             return Err(ErrorCode::ContentTooLong.into());
+        }
+        if slug.len() > 10 || title.len() > 50 {
+            return Err(ErrorCode::SlugOrTitleTooLong.into())
+        }
+
+        if author.len() > 25 {
+            return Err(ErrorCode::AuthorTooLong.into())
         }
 
         let blog = &mut ctx.accounts.blog_account;
         let authority = &mut ctx.accounts.authority;
-
-        //Lets build a BlogStruct here.
-        let new_blog = BlogStruct {
-            blog: post.to_string(),
-            user_address: *authority.to_account_info().key,
-        };
-        // // Anchor takes Care of all these below lines of Code:
-        //     // Now to allow transactions we want only the authority to sign the transaction.
-        //     if !authority.to_account_info().is_signer {
-        //         msg!("creator_account should be signer");
-        //         return Err(ProgramError::IncorrectProgramId);
-        //     }
-
-        //     // We want to write blog in the account owned by the program.
-        //     if blog.owner != program_id() {
-        //     msg!("This Blog Account isn't owned by Current Program");
-        //     return Err(ProgramError::IncorrectProgramId);
-        // }
-
-        //     //We doubly check that user_address = Signer's pubkey
-        //     if new_blog.user_address != *authority.to_account_info().key {
-        //         msg!("You are not authorized to perform this action.");
-        //         return Err(ErrorCode::Unauthorized.into());
-        //     }
-
-        //     let rent_exemption = Rent::get()?.minimum_balance(blog.to_account_info().data_len());
-        //         if **blog.to_account_info().lamports.borrow() < rent_exemption {
-        //         msg!("The balance of blog_account should be more than rent_exemption");
-        //         return Err(ProgramError::InsufficientFunds);
-        //         }
-
-        //     new_blog.serialize(&mut &mut blog.to_account_info().data.borrow_mut()[..])?;
+        let post_account = &mut ctx.accounts.post_account;
+        let clock = Clock::get().unwrap();
+       
         
-        blog.posts.push(new_blog);
         blog.count += 1;
+
+        post_account.timestamp = clock.unix_timestamp;
+        post_account.blog = post;
+        post_account.user_address = *authority.to_account_info().key;
+        post_account.slug = slug.to_string();
+        post_account.bump = post_account_bump;
 
         Ok(())
     }
 
-    //Create a custom struct for us to work with.
-    #[derive(Debug, Clone, AnchorSerialize, AnchorDeserialize)]
-    pub struct BlogStruct {
-        pub blog: String,
-        pub user_address: Pubkey,
-    }
+    
 
+    //Account<'info, BlogState> tells us that it should be deserialized to the BlogState struct defined further down below..
     #[derive(Accounts)]
     #[instruction(blog_account_bump: u8)]
     pub struct Initialize<'info> {
-        #[account(init, seeds = [b"blog_state".as_ref()], bump = blog_account_bump, payer = authority, space = BlogState::LEN)]
+        #[account(init, seeds = [b"blogstate__________account___".as_ref(), authority.key.as_ref()], bump = blog_account_bump, payer = authority, space = BlogState::LEN)]
         blog_account: Account<'info, BlogState>,
         #[account(mut)]
         authority: Signer<'info>,
         #[account(address = system_program::ID)]
-        system_program: Program<'info, System>,
+        system_program: AccountInfo<'info>,
     }
 
-    //has_one = authority enforces the constraint again that MakePost.blog_account.authority == MakesPost.authority.key
-    #[derive(Accounts)]
     
+    #[derive(Accounts)]
+    #[instruction(post_account_bump: u8, post: Post)]
     pub struct MakePost<'info> {
-        #[account(mut, seeds = [b"blog_state".as_ref()], bump = blog_account.bump, has_one = authority )]
+        #[account(mut, has_one = authority)] 
         blog_account: Account<'info, BlogState>,
+        #[account(init, 
+            seeds = [b"post".as_ref(), blog_account.key().as_ref(), post.slug.as_ref()],
+            bump = post_account_bump, 
+            payer = authority,
+            space = Post::LEN)
+            ] 
+        post_account : Account<'info, Post>,
         #[account(mut)]
         authority: Signer<'info>,
+        #[account(address = system_program::ID)]
+        system_program : AccountInfo<'info>,
     }
+
+
 
     #[account]
     // #[derive(Default)]
     pub struct BlogState {
         pub authority: Pubkey,
         pub count: u64,
-        pub posts: Vec<BlogStruct>,
+        //pub posts: Vec<Post>,
         pub bump: u8,
         pub owner: Pubkey,
-        pub timestamp: i64,
+       
+       
     }
 
     // 2. Add some useful constants for sizing properties.
@@ -121,22 +124,66 @@ pub mod solana_blog_tutorial {
     const DISCRIMINATOR_LENGTH: usize = 8;
     const PUBLIC_KEY_LENGTH: usize = 32;
     const TIMESTAMP_LENGTH: usize = 8;
+    const COUNT_LENGTH : usize = 16;
     const STRING_LENGTH_PREFIX: usize = 4; // Stores the size of the string.
-    const MAX_CONTENT_LENGTH: usize = 2000; // 2000 chars max as nobody would read such indordinately big blogs
+    const MAX_AUTHOR_LENGTH : usize = 100;
+    const MAX_TITLE_LENGTH : usize = 200; //50 chars max * 4 bytes as nobody would read such indordinately big Introductions
+    const MAX_CONTENT_LENGTH: usize = 20000; // 5000 chars * 4 max length of bytes allowed for a Blog
+    const SLUG_LENGTH : usize = 40;
+    const BUMP_LENGTH : usize = 1;
 
     // 3. Add a constant on the Blog account that provides its total size.
     impl BlogState {
         const LEN: usize = DISCRIMINATOR_LENGTH
-    + PUBLIC_KEY_LENGTH // Author.
-    + TIMESTAMP_LENGTH // Timestamp.
-    + STRING_LENGTH_PREFIX + MAX_CONTENT_LENGTH; // Content.
+    + PUBLIC_KEY_LENGTH // Public key of the BlogAccount
+    + PUBLIC_KEY_LENGTH //PublicKey of the Authority, aka User
+    + PUBLIC_KEY_LENGTH //Public key of the Owner, aka PROGRAM_ID
+    + BUMP_LENGTH
+    + COUNT_LENGTH; // 
     }
+
+
+   
+    #[account]
+    pub struct Post {
+        pub blog: String,
+        pub user_address: Pubkey,
+        pub slug : String,
+        pub bump : u8,
+        pub author : String,
+        pub title : String,
+        pub timestamp: i64,
+        
+    }
+
+    //4. Add a constant on the Post account that provides its total size
+    impl Post {
+        const LEN : usize = DISCRIMINATOR_LENGTH 
+        + PUBLIC_KEY_LENGTH // Public Key of the PostAccount
+        + PUBLIC_KEY_LENGTH // Public Key of the Authority, aka User
+        + BUMP_LENGTH
+        + TIMESTAMP_LENGTH // Timestamp.
+        + STRING_LENGTH_PREFIX
+        + SLUG_LENGTH
+        + STRING_LENGTH_PREFIX 
+        + MAX_AUTHOR_LENGTH
+        + STRING_LENGTH_PREFIX
+        + MAX_TITLE_LENGTH
+        + STRING_LENGTH_PREFIX
+        + MAX_CONTENT_LENGTH; // THIS IS THE BLOG CONTENT LENGTH 
+    }
+
 
     #[error]
     pub enum ErrorCode {
         #[msg("You are not authorized to perform this action.")]
         Unauthorized,
-        #[msg("The provided Blog should be 2000 characters long maximum.")]
+        #[msg("The provided Blog should be 5000 characters long maximum.")]
         ContentTooLong,
+        #[msg("Title cannot be more than 50 characters And Slug cannot be more than 10 characters")]
+        SlugOrTitleTooLong,
+        #[msg("Author Name cannot be more than 25 characters")]
+        AuthorTooLong
+
     }
 }
