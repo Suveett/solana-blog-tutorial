@@ -71,7 +71,7 @@ describe('SolanaBlogTutorial', () => {
         // signers[postAccount] -> Why we dont have to mention signers? Is it because the 
         // const [postAccount, bump] = await PublicKey.findProgramAddress(
         // [Buffer.from("post"), Buffer.from("slug-1"), provider.wallet.publicKey.toBuffer()], programId
-        //  Expression already discovers the program derived Address, which means the PDA has already signed itself ingto existence ??
+        //  Expression already discovers the program derived Address, and using this address the PDA later signs itself into existence..
         //
         );
       });
@@ -155,19 +155,9 @@ async function getPostAccount() {
     console.log(error);
   }
 
+  
+  
 };
-
-//This is an unused function : Trying to figure out another way to recall the Post as on 23.02.2022 ?? If Someone can help >>??
-async function getPost() {
-
-const postAccountInfo = await connection.getAccountInfo(postAccount);
-const postAccountState = POST_ACCOUNT_DATA_LAYOUT.decode(
-  postAccountInfo.data
-);
-console.log("Post account state: ", postAccountState);
-return postAccountState.post
-}
-
 
 
 
