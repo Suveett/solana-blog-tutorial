@@ -1,19 +1,20 @@
 
 const assert = require('assert');
 const anchor = require('@project-serum/anchor');
-const { PublicKey, Connection } = require("@solana/web3.js");
-const cluster = "https://api.devnet.solana.com";
-const connection = new Connection(cluster, "confirmed");
+const { PublicKey } = require("@solana/web3.js");
 const { SystemProgram } = anchor.web3;
 const { Buffer, SlowBuffer } = require('buffer');
+const { decode } = require('borsh');
 
-
-
+// Specify provider environment. 
 const provider = anchor.Provider.env();
+//Set provider.
 anchor.setProvider(provider);
+//Specify the workspace 
 const program = anchor.workspace.SolanaBlogTutorial;
-const programId = new PublicKey("9PDxrRioTz3yGPtVP5unaa9FhT12YdcVADYLiG4CME7i");
-//const otherUser = anchor.web3.Keypair.generate();
+//const programID = await connection.programID(program);
+const programId = new PublicKey("5ftRvxoMzkEQGoF5queGKoh7Bow9dP8bXhdh1R5GEFEk");
+
 
 
 
@@ -22,17 +23,16 @@ describe('SolanaBlogTutorial', () => {
 
   //This test we are not using Keypair.generate() as below....
   //const blogAccount = anchor.web3.Keypair.generate();
-  //Instead we query {PublicKey} to inform us using seeds + bump, on the created blogAccount (or ProgramAccount in Solana Terminology)..
+  //Instead we query {PublicKey} to inform us using seeds + bump, on the created blogAccount (i.e. PDA in Solana Terminology)..
 
   console.log("🚀 Starting test....");
 
   try {
     it('gets initialized', async () => {
       const { blogAccount, bump } = await getProgramDerivedBlogAddress();
-     
 
-      console.log("Starting `Initialize` test..");
-      let tx = await program.rpc.initialize(new anchor.BN(bump), {
+     
+      let tx = await program.rpc.initializeBlog(new anchor.BN(bump), {
         accounts: {
           blogAccount: blogAccount,
           authority: provider.wallet.publicKey,
@@ -40,16 +40,17 @@ describe('SolanaBlogTutorial', () => {
         },
         //signers: [blogAccount],
       });
+      console.log("Starting `Initialize` test..");
       //Console.log the Transaction signature of the Initialization procedure. 
       console.log("Initialization transaction signature : ", tx);
 
       //Asserts and console.logs
       const account = await getBlogAccount();
       assert.equal(account.authority.toBase58(), provider.wallet.publicKey.toBase58());
-      assert.equal(account.count.toNumber(), 0);
+      assert.equal(account.postCount.toNumber(), 0);
 
       console.log('👀 Account Authority pubKey : ', account.authority.toBase58());
-      console.log("👀 Account count is :", account.count.toNumber());
+      console.log("👀 Account count is :", account.postCount.toNumber());
     });
   } catch (error) {
     console.log(error);
@@ -60,38 +61,34 @@ describe('SolanaBlogTutorial', () => {
     it('can send a blog', async () => {
       const { blogAccount } = await getProgramDerivedBlogAddress();
       const { postAccount, bump } = await getProgramDerivedPostAddress();
-      console.log("Starting `postBlog` test using provider.wallet.publicKey..");
-      let firstTx = await program.rpc.makePost('Suveet', 'Hi', 'Jai Guru Ji', 'slug-1', new anchor.BN(bump), {
+      
+      let firstTx = await program.rpc.makePost('Suveett', 'Blog Tutorial', 'Jai Guru Ji', 'slug', new anchor.BN(bump), {
         accounts: {
           blogAccount: blogAccount,
           postAccount: postAccount,
           authority: provider.wallet.publicKey,
           systemProgram: SystemProgram.programId,
         }
-        // signers[postAccount] -> Why we dont have to mention signers? Is it because the 
-        // const [postAccount, bump] = await PublicKey.findProgramAddress(
-        // [Buffer.from("post"), Buffer.from("slug-1"), provider.wallet.publicKey.toBuffer()], programId
-        //  Expression already discovers the program derived Address, and using this address the PDA later signs itself into existence..
-        //
-        );
+        // signers[blogAccount, postAccount]
       });
-
+      console.log("Starting `postBlog` test ");
       //Console.log the Transaction signature of the postBlog procedure. 
       console.log("PostBlog transaction signature", firstTx);
-      const newBlogAccount = await getBlogAccount();
-      const newPostAccount = await getPostAccount();
+      const blog = await getBlogAccount();
+      const post = await getPostAccount();
 
       //Asserts and Console Logs
-      assert.equal(newBlogAccount.authority.toBase58(), provider.wallet.publicKey.toBase58());
-      assert.equal(newPostAccount.blog, "Jai Guru Ji");
-      assert.ok(newPostAccount.timestamp);
-      console.log("Authority PubKey is : ", newBlogAccount.authority.toBase58());
-      console.log('👀 New Blog content :', newPostAccount.blog);
-      console.log('New BlogPost author : ', newPostAccount.author);
-      console.log('👀 Blog Timestamp is :', newPostAccount.timestamp);
-      console.log("👀 Account count is :", newBlogAccount.count.toNumber());
-      const post = getPost();
-      console.log('New Blog again : ', post);
+      assert.equal(post.author.toBase58(), provider.wallet.publicKey.toBase58());
+      assert.equal(post.authorName, "Suveett");
+      assert.equal(post.title, "Blog Tutorial");
+      assert.equal(post.content, "Jai Guru Ji");
+      assert.ok(post.timestamp);
+      console.log("Authority PubKey is : ", post.author.toBase58());
+      console.log('👀 New Blog content :', post.content);
+      console.log('👀 This BlogPost author"s name is : ', post.authorName);
+      console.log('👀 Blog Timestamp is :', post.timestamp);
+      console.log("👀 The number of Posts made by Author :", blog.postCount.toNumber());
+      
     });
   } catch (error) {
     console.log(error);
@@ -99,65 +96,10 @@ describe('SolanaBlogTutorial', () => {
 
 
 
+  
 
 });
 
-
-
-
-
-
-
-
-async function getProgramDerivedBlogAddress() {
-  const buf = Buffer.from('blogstate__________account___');
-  const [blogAccount, bump] = await PublicKey.findProgramAddress(
-    [buf, provider.wallet.publicKey.toBuffer()],
-    programId
-  );
-
-  console.log(`Got ProgramDerivedBlogAddress: bump: ${bump}, pubkey: ${blogAccount.toBase58()}`);
-  return { blogAccount, bump };
-
-};
-
-async function getProgramDerivedPostAddress() {
-  const [postAccount, bump] = await PublicKey.findProgramAddress(
-    [Buffer.from("post"), Buffer.from("slug-1"), provider.wallet.publicKey.toBuffer()],
-    programId
-  );
-  console.log(`Got ProgramDerivedPostAddress: bump: ${bump}, pubkey: ${postAccount.toBase58()}`);
-  return { postAccount, bump };
-
-}
-
-async function getBlogAccount() {
-  const { blogAccount } = await getProgramDerivedBlogAddress();
-
-  try {
-    const account = await program.account.blogState.fetch(blogAccount);
-
-    return account;
-
-
-  } catch (error) {
-    console.log(error);
-  }
-};
-
-async function getPostAccount() {
-  const { postAccount } = await getProgramDerivedPostAddress();
-
-  try {
-    const account = await program.account.post.fetch(postAccount);
-    return account;
-  } catch (error) {
-    console.log(error);
-  }
-
-  
-  
-};
 
 
 
