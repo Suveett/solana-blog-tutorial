@@ -1,3 +1,15 @@
+/// As on 6.03.2022 I have having the below issues while making tests: If someone can Help, I shall be obliged ..
+
+//   1 passing (3s)
+//   1 failing
+
+//   1) SolanaBlogTutorial
+//        can send a blog:
+//      Error: 102: The program could not deserialize the given instruction
+//       at Function.parse (node_modules/@project-serum/anchor/dist/cjs/error.js:40:20)
+//       at Object.rpc [as makePost] (node_modules/@project-serum/anchor/dist/cjs/program/namespace/rpc.js:38:61)
+//       at processTicksAndRejections (node:internal/process/task_queues:96:5)
+//       at async Context.<anonymous> (tests/solana_blog_tutorial.js:73:21)
 
 const assert = require('assert');
 const anchor = require('@project-serum/anchor');
